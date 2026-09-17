@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Model weights — too large for git, download on first run
+models/*.pkl
+models/*.pt
+models/*.bin
+models/*.safetensors
+
+# HuggingFace / torch cache — local only
+.cache/
+
+# macOS
+.DS_Store
+*.swp
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Database — user-specific, not for version control
+*.db
+
+# PyInstaller
+*.spec
