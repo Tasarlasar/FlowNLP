@@ -32,8 +32,11 @@ class SearchFormatter(FormatterBase):
 
         text = clean_text.strip().rstrip("?.")
 
-        # Remove common leading phrases
-        text = _LEAD_PHRASES.sub("", text)
+        # Remove common leading phrases (repeatedly until none left)
+        prev = None
+        while prev != text:
+            prev = text
+            text = _LEAD_PHRASES.sub("", text).strip()
 
         # Lowercase for search consistency
         text = text.strip().lower()

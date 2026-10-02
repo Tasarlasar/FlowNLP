@@ -9,7 +9,7 @@ NLP post-processing.
 ## Overview
 
 ```
-Microphone → VAD → Whisper → NLP Pipeline → Context Detector → Formatter → Active App
+Microphone → Full-session capture → VAD → Whisper → NLP Pipeline → Context Detector → Formatter → Active App
 ```
 
 FlowNLP is not simply speech-to-text. After ASR, a full NLP pipeline:
@@ -128,6 +128,10 @@ python -m spacy download en_core_web_sm
 python main.py
 ```
 
+On first launch, FlowNLP downloads its local speech and grammar models. The
+grammar-correction model (`vennify/t5-base-grammar-correction`) runs locally and
+is licensed for non-commercial use (CC BY-NC-SA 4.0).
+
 ---
 
 ## Usage
@@ -135,9 +139,9 @@ python main.py
 1. Launch FlowNLP — the main window appears.
 2. Press **Ctrl+Shift+Space** anywhere on your desktop to start dictation.
 3. Speak naturally.
-4. Press the hotkey again (or click **Stop**) to end recording.
-5. The NLP pipeline runs and the formatted text is automatically inserted
-   into the active application (or placed in your clipboard if injection fails).
+4. Press the hotkey again (or click **Stop**) to end the full recording.
+5. FlowNLP transcribes and processes the completed speech, then inserts the formatted text
+    into the active application (or placed on your clipboard if injection fails).
 
 ### Output Modes
 

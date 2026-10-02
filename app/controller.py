@@ -1,16 +1,4 @@
-"""
-Central Controller — Streaming Mode
-Wires the streaming recorder, ASR, NLP pipeline, context detector,
-formatter, and text injector together.
-
-Architecture
-------------
-- While RECORDING, StreamingRecorder fires on_chunk() every ~1.5 s
-  whenever speech is detected.
-- Each chunk is transcribed → NLP → formatted → typed immediately.
-- The hotkey toggle starts/stops the recording session.
-- State always returns to IDLE after a session ends.
-"""
+"""Coordinate complete dictation sessions from recording through insertion."""
 
 import logging
 import threading
@@ -22,7 +10,7 @@ from PySide6.QtCore import QObject, Signal
 from app.states import AppState
 from app.hotkey import HotkeyManager
 from audio.audio_utils import SAMPLE_RATE
-from audio.recorder import StreamingRecorder
+from audio.recorder import SessionRecorder
 from asr.whisper_engine import WhisperEngine
 from nlp.pipeline import NLPPipeline
 from context.detector import ContextDetector
@@ -59,8 +47,10 @@ class Controller(QObject):
         self._state = AppState.IDLE
 
         # Subsystems
-        self._recorder  = StreamingRecorder(on_chunk=self._on_audio_chunk)
-        self._asr       = WhisperEngine()
+        self._recorder  = SessionRecorder()
+        self._asr       = WhisperEngine(
+            model_size=self._db.get_setting("whisper_model", "base")
+        )
         self._nlp       = NLPPipeline()
         self._context   = ContextDetector()
         self._injector  = TextInjector()
@@ -72,10 +62,6 @@ class Controller(QObject):
             "SEARCH": SearchFormatter(),
             "CODE":   CodeFormatter(),
         }
-
-        # Serialise chunk processing — one chunk at a time to avoid
-        # overlapping pyautogui calls
-        self._chunk_lock = threading.Lock()
 
         # Cache the active app at session start so we don't query it
         # for every chunk (the user stays in the same window while dictating)
@@ -116,7 +102,13 @@ class Controller(QObject):
         self._active_app = self._get_active_app()
         self._user_mode  = self._db.get_setting("output_mode", "Auto")
         self._set_state(AppState.RECORDING)
-        self._recorder.start()
+        try:
+            self._recorder.start()
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Could not start microphone recording: %s", exc)
+            self.error_occurred.emit(str(exc))
+            self._set_state(AppState.IDLE)
+            return
         logger.info("Recording started. Active app: '%s'", self._active_app)
 
     def stop_recording(self) -> None:
@@ -125,65 +117,63 @@ class Controller(QObject):
             return
         self._set_state(AppState.PROCESSING)
 
-        # stop() returns any leftover audio not yet dispatched
-        leftover = self._recorder.stop()
-        if leftover is not None and len(leftover) > 0:
-            logger.debug("Processing leftover audio (%d samples).", len(leftover))
-            self._process_chunk(leftover)
-
-        self._set_state(AppState.IDLE)
-
-    # ------------------------------------------------------------------
-    # Chunk pipeline (called from StreamingRecorder background thread)
-    # ------------------------------------------------------------------
-
-    def _on_audio_chunk(self, audio: np.ndarray) -> None:
-        """Callback fired by StreamingRecorder for each detected speech chunk."""
-        # Only process chunks while we are still recording
-        if self._state not in (AppState.RECORDING, AppState.PROCESSING):
+        try:
+            audio = self._recorder.stop()
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Could not stop microphone recording: %s", exc)
+            self.error_occurred.emit(str(exc))
+            self._set_state(AppState.IDLE)
             return
-        # Serialise so chunks don't interleave keystrokes
-        thread = threading.Thread(
-            target=self._process_chunk, args=(audio,), daemon=True
-        )
-        thread.start()
 
-    def _process_chunk(self, audio: np.ndarray) -> None:
-        with self._chunk_lock:
-            try:
-                # 1. ASR
-                asr_result = self._asr.transcribe(audio)
-                raw_text: str = asr_result.get("text", "").strip()
-                if not raw_text:
-                    return
-                self.transcript_ready.emit(raw_text)
-                logger.info("ASR chunk: '%s'", raw_text)
+        if audio is None or len(audio) == 0:
+            self.error_occurred.emit("No speech was captured.")
+            self._set_state(AppState.IDLE)
+            return
 
-                # 2. NLP
-                nlp_result  = self._nlp.process(raw_text)
-                clean_text: str = nlp_result.get("clean_text", raw_text)
+        threading.Thread(
+            target=self._process_session, args=(audio,), daemon=True
+        ).start()
 
-                # 3. Context
-                context = self._context.detect(
-                    nlp_result=nlp_result,
-                    active_app=self._active_app,
-                    user_mode=self._user_mode if self._user_mode != "Auto" else "",
-                )
+    def _process_session(self, audio: np.ndarray) -> None:
+        try:
+            speech = self._recorder.extract_speech(audio)
+            if speech is None or len(speech) == 0:
+                self.error_occurred.emit("No speech was detected.")
+                return
 
-                # 4. Format
-                formatter: FormatterBase = self._formatters.get(context, ChatFormatter())
-                formatted: str = formatter.format(clean_text, nlp_result)
+            asr_result = self._asr.transcribe(speech)
+            raw_text: str = asr_result.get("text", "").strip()
+            if not raw_text:
+                self.error_occurred.emit("Speech could not be transcribed.")
+                return
 
-                # 5. Type into active window — append a space so words
-                #    don't run together across chunks
-                to_type = formatted.rstrip() + " "
-                self._injector.insert(to_type)
+            self.transcript_ready.emit(raw_text)
+            logger.info("ASR session: '%s'", raw_text)
+
+            personal_dictionary = set(self._db.get_dictionary_words())
+            nlp_result = self._nlp.process(
+                raw_text,
+                personal_dictionary=personal_dictionary,
+            )
+            clean_text: str = nlp_result.get("clean_text", raw_text)
+
+            context = self._context.detect(
+                nlp_result=nlp_result,
+                active_app=self._active_app,
+                user_mode=self._user_mode if self._user_mode != "Auto" else "",
+            )
+            formatter: FormatterBase = self._formatters.get(context, ChatFormatter())
+            formatted = formatter.format(clean_text, nlp_result).strip()
+
+            if formatted:
+                self._injector.insert(formatted)
                 self.result_ready.emit(formatted)
-                logger.info("Typed chunk: '%s'", formatted)
-
-            except Exception as exc:  # noqa: BLE001
-                logger.exception("Chunk processing error: %s", exc)
-                self.error_occurred.emit(str(exc))
+                logger.info("Inserted completed dictation: '%s'", formatted)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Session processing error: %s", exc)
+            self.error_occurred.emit(str(exc))
+        finally:
+            self._set_state(AppState.IDLE)
 
     # ------------------------------------------------------------------
     # Warmup — load all models before the first hotkey press
@@ -209,10 +199,8 @@ class Controller(QObject):
             logger.warning("Warmup NLP failed: %s", exc)
 
         try:
-            # 3. VAD (inside StreamingRecorder — trigger load on silence)
-            from audio.vad import VADProcessor
-            vad = VADProcessor()
-            vad.contains_speech(np.zeros(SAMPLE_RATE, dtype=np.float32))
+            # 3. VAD (warm the same instance used for session processing)
+            self._recorder.warmup_vad()
             logger.info("Warmup: VAD ready.")
         except Exception as exc:
             logger.warning("Warmup VAD failed: %s", exc)

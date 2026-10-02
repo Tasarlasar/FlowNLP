@@ -59,6 +59,7 @@ def run_benchmark(
     }
 
     wer_raw_all, wer_nlp_all = [], []
+    cer_raw_all, cer_nlp_all = [], []
     intent_true, intent_pred = [], []
 
     for i, sample in enumerate(samples):
@@ -66,7 +67,7 @@ def run_benchmark(
         reference = sample["reference"]
         audio_path = sample.get("audio_path")
 
-        # Load audio
+        # Load audio or fallback to provided raw_asr text
         import numpy as np
         audio: Optional[np.ndarray] = None
         if audio_path and os.path.exists(audio_path):
@@ -76,19 +77,23 @@ def run_benchmark(
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Could not load %s: %s", audio_path, exc)
 
-        if audio is None:
-            logger.warning("Skipping sample %d — no audio.", i + 1)
+        if audio is not None:
+            t0 = time.perf_counter()
+            asr_result = asr.transcribe(audio)
+            raw_text = asr_result.get("text", "")
+            asr_time = time.perf_counter() - t0
+        elif "raw_asr" in sample:
+            raw_text = sample["raw_asr"]
+            asr_time = 0.0
+        else:
+            logger.warning("Skipping sample %d — no audio or raw_asr provided.", i + 1)
             continue
 
-        # Level 1: Raw ASR
-        t0 = time.perf_counter()
-        asr_result = asr.transcribe(audio)
-        raw_text = asr_result.get("text", "")
-        asr_time = time.perf_counter() - t0
 
         wer_raw = compute_wer(reference, raw_text)
         cer_raw = compute_cer(reference, raw_text)
         wer_raw_all.append(wer_raw)
+        cer_raw_all.append(cer_raw)
 
         # Level 4: Full NLP pipeline
         t1 = time.perf_counter()
@@ -99,6 +104,7 @@ def run_benchmark(
         wer_nlp = compute_wer(reference, clean_text)
         cer_nlp = compute_cer(reference, clean_text)
         wer_nlp_all.append(wer_nlp)
+        cer_nlp_all.append(cer_nlp)
 
         sem_score = semantic_preservation_score(reference, clean_text)
 
@@ -125,8 +131,24 @@ def run_benchmark(
     def mean(lst):
         return round(sum(lst) / len(lst), 4) if lst else -1.0
 
-    results["levels"]["raw_asr"] = {"mean_wer": mean(wer_raw_all)}
-    results["levels"]["flownlp"] = {"mean_wer": mean(wer_nlp_all)}
+    raw_wer = mean(wer_raw_all)
+    processed_wer = mean(wer_nlp_all)
+    raw_cer = mean(cer_raw_all)
+    processed_cer = mean(cer_nlp_all)
+    results["levels"]["raw_asr"] = {
+        "mean_wer": raw_wer,
+        "mean_cer": raw_cer,
+    }
+    results["levels"]["flownlp"] = {
+        "mean_wer": processed_wer,
+        "mean_cer": processed_cer,
+    }
+    results["levels"]["processed_minus_raw"] = {
+        "mean_wer": round(processed_wer - raw_wer, 4)
+        if raw_wer >= 0 and processed_wer >= 0 else -1.0,
+        "mean_cer": round(processed_cer - raw_cer, 4)
+        if raw_cer >= 0 and processed_cer >= 0 else -1.0,
+    }
 
     if intent_true:
         results["intent_metrics"] = compute_classification_metrics(
@@ -154,8 +176,20 @@ def _print_summary(results: dict) -> None:
     print(f"  Samples evaluated: {results['num_samples']}")
     raw = results.get("levels", {}).get("raw_asr", {})
     nlp = results.get("levels", {}).get("flownlp", {})
-    print(f"  Raw ASR  — Mean WER: {raw.get('mean_wer', 'N/A')}")
-    print(f"  FlowNLP  — Mean WER: {nlp.get('mean_wer', 'N/A')}")
+    change = results.get("levels", {}).get("processed_minus_raw", {})
+    print(
+        f"  Raw ASR  — Mean WER: {raw.get('mean_wer', 'N/A')}"
+        f" | CER: {raw.get('mean_cer', 'N/A')}"
+    )
+    print(
+        f"  FlowNLP  — Mean WER: {nlp.get('mean_wer', 'N/A')}"
+        f" | CER: {nlp.get('mean_cer', 'N/A')}"
+    )
+    print(
+        f"  Change   — WER: {change.get('mean_wer', 'N/A')}"
+        f" | CER: {change.get('mean_cer', 'N/A')}"
+        " (negative is better)"
+    )
     if "intent_metrics" in results:
         im = results["intent_metrics"]
         print(f"  Intent   — F1: {im.get('f1', 'N/A')}")

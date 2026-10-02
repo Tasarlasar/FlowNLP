@@ -48,7 +48,12 @@ class NLPPipeline:
         self._intent_classifier = IntentClassifier()
         self._embeddings = EmbeddingEngine()
 
-    def process(self, raw_text: str, context: Optional[str] = None) -> dict:
+    def process(
+        self,
+        raw_text: str,
+        context: Optional[str] = None,
+        personal_dictionary: Optional[set[str]] = None,
+    ) -> dict:
         """
         Run the full NLP pipeline.
 
@@ -58,6 +63,8 @@ class NLPPipeline:
             The raw transcript from the ASR engine.
         context : str, optional
             An optional hint about the target context (EMAIL, CHAT, …).
+        personal_dictionary : set[str], optional
+            User custom dictionary words to protect.
 
         Returns
         -------
@@ -76,8 +83,10 @@ class NLPPipeline:
         tokens = self._tokenizer.tokenize(normalized)
         result["tokens"] = tokens
 
-        # 3. Filler removal
-        no_fillers = self._filler_remover.remove(normalized, tokens)
+        # 3. Filler removal (pass tokens and personal_dictionary)
+        no_fillers = self._filler_remover.remove(
+            normalized, tokens=tokens, personal_dictionary=personal_dictionary
+        )
         result["text_after_filler"] = no_fillers
 
         # 4. Repetition detection
