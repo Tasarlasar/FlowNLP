@@ -82,6 +82,11 @@ class Controller(QObject):
         self._active_app: str = ""
         self._user_mode:  str = ""
 
+        # Duplicate guard — stores the last typed text so we never type the
+        # same utterance twice in a row (can happen if ASR returns identical
+        # text for consecutive near-identical audio chunks)
+        self._last_typed: str = ""
+
         self._hotkey_manager = HotkeyManager(
             on_start=self.start_recording,
             on_stop=self.stop_recording,
@@ -113,8 +118,9 @@ class Controller(QObject):
         if self._state != AppState.IDLE:
             logger.warning("start_recording ignored — state=%s", self._state.name)
             return
-        self._active_app = self._get_active_app()
-        self._user_mode  = self._db.get_setting("output_mode", "Auto")
+        self._active_app  = self._get_active_app()
+        self._user_mode   = self._db.get_setting("output_mode", "Auto")
+        self._last_typed  = ""          # reset duplicate guard each session
         self._set_state(AppState.RECORDING)
         self._recorder.start()
         logger.info("Recording started. Active app: '%s'", self._active_app)
@@ -176,8 +182,17 @@ class Controller(QObject):
 
                 # 5. Type into active window — append a space so words
                 #    don't run together across chunks
+
+                # Duplicate guard: skip if identical to last typed utterance
+                # (protects against Whisper returning the same text twice)
+                normalised = formatted.strip().lower()
+                if normalised and normalised == self._last_typed.strip().lower():
+                    logger.debug("Duplicate suppressed: '%s'", formatted)
+                    return
+
                 to_type = formatted.rstrip() + " "
                 self._injector.insert(to_type)
+                self._last_typed = formatted
                 self.result_ready.emit(formatted)
                 logger.info("Typed chunk: '%s'", formatted)
 
@@ -191,10 +206,8 @@ class Controller(QObject):
 
     def _warmup(self) -> None:
         """Load every lazy model so the first real chunk has no cold-start delay."""
-        import numpy as np
-        logger.info("Warming up models …")
+        logger.info("Warming up models (this takes ~30s on first run) …")
         try:
-            # 1. Whisper
             silence = np.zeros(SAMPLE_RATE * 1, dtype=np.float32)
             self._asr.transcribe(silence)
             logger.info("Warmup: Whisper ready.")
@@ -202,14 +215,12 @@ class Controller(QObject):
             logger.warning("Warmup Whisper failed: %s", exc)
 
         try:
-            # 2. NLP pipeline (tokenizer, grammar, NER, intent, embeddings)
             self._nlp.process("hello world")
             logger.info("Warmup: NLP pipeline ready.")
         except Exception as exc:
             logger.warning("Warmup NLP failed: %s", exc)
 
         try:
-            # 3. VAD (inside StreamingRecorder — trigger load on silence)
             from audio.vad import VADProcessor
             vad = VADProcessor()
             vad.contains_speech(np.zeros(SAMPLE_RATE, dtype=np.float32))
@@ -217,8 +228,8 @@ class Controller(QObject):
         except Exception as exc:
             logger.warning("Warmup VAD failed: %s", exc)
 
-        logger.info("All models warmed up — ready to dictate.")
-        self.state_changed.emit(self._state)   # refresh UI status label
+        logger.info("✓ All models ready — press Ctrl+Shift+Space to dictate.")
+        self.state_changed.emit(self._state)
 
     # ------------------------------------------------------------------
     # Helpers
