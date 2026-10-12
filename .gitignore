@@ -38,6 +38,7 @@ models/*.safetensors
 # Database — user-specific, not for version control
 *.db
 /web_data/
+/app_data/
 
 # PyInstaller
 *.spec
