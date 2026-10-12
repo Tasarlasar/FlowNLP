@@ -227,6 +227,15 @@ class AppController(QObject):
                 except Exception as exc:
                     logger.warning("Text injection failed: %s", exc)
 
+            # Auto-copy the corrected text to clipboard immediately
+            if result["faithful_text"]:
+                try:
+                    from output.clipboard import ClipboardManager
+                    ClipboardManager.copy(result["faithful_text"])
+                    logger.info("Auto-copied corrected text to clipboard.")
+                except Exception as exc:
+                    logger.warning("Auto-copy failed: %s", exc)
+
             self.transcript_ready.emit(result["raw_text"])
             self.result_ready.emit(record_id, result["faithful_text"])
             self._set_state(AppState.COMPLETED)

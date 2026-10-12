@@ -272,7 +272,7 @@ class RecordTab(QWidget):
             self._record_btn.setStyleSheet(self._record_btn_style(False))
             self._timer.stop()
             if state == AppState.COMPLETED:
-                self._status_label.setText("✓ Done — saved to Library")
+                self._status_label.setText("✓ Done — copied to clipboard")
                 self._status_label.setStyleSheet(
                     f"color: {C_GREEN}; font-size: 12px; padding: 8px 0;"
                 )
@@ -292,6 +292,11 @@ class RecordTab(QWidget):
     @Slot(str, str)
     def _on_result(self, _record_id: str, text: str) -> None:
         self._output_area.setPlainText(text)
+        # Show copied confirmation in status
+        self._status_label.setText("✓ Done — copied to clipboard")
+        self._status_label.setStyleSheet(
+            f"color: {C_GREEN}; font-size: 12px; padding: 8px 0;"
+        )
 
     @Slot(str)
     def _on_error(self, message: str) -> None:
