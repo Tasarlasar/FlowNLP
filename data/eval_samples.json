@@ -1,0 +1,52 @@
+[
+  {
+    "raw_asr": "uh hey can you like send the project report to Arun tomorrow morning and uh mention that the model results are ready",
+    "reference": "Hey can you send the project report to Arun tomorrow morning and mention that the model results are ready.",
+    "intent": "EMAIL"
+  },
+  {
+    "raw_asr": "um search for python sentence transformers tutorial and example code",
+    "reference": "Search for python sentence transformers tutorial and example code.",
+    "intent": "SEARCH"
+  },
+  {
+    "raw_asr": "function process audio function process audio to calculate speech timestamps",
+    "reference": "Function process audio to calculate speech timestamps.",
+    "intent": "CODE"
+  },
+  {
+    "raw_asr": "first buy milk then call Subhasri finally finish the nlp project presentation",
+    "reference": "First buy milk then call Subhasri finally finish the nlp project presentation.",
+    "intent": "NOTE"
+  },
+  {
+    "raw_asr": "what time is the project submission deadline tomorrow period",
+    "reference": "What time is the project submission deadline tomorrow?",
+    "intent": "QUESTION"
+  },
+  {
+    "raw_asr": "um i want to to test the the pipeline performance on spoken transcripts",
+    "reference": "I want to test the pipeline performance on spoken transcripts.",
+    "intent": "REQUEST"
+  },
+  {
+    "raw_asr": "variable user name variable user name for authentication model",
+    "reference": "Variable user name for authentication model.",
+    "intent": "CODE"
+  },
+  {
+    "raw_asr": "i mean please send the email to John with the updated results comma thanks",
+    "reference": "Please send the email to John with the updated results, thanks.",
+    "intent": "EMAIL"
+  },
+  {
+    "raw_asr": "bullet point check spacy installation bullet point run pytest benchmark",
+    "reference": "Bullet point check spacy installation bullet point run pytest benchmark.",
+    "intent": "NOTE"
+  },
+  {
+    "raw_asr": "where is the nearest coffee shop nearby question mark",
+    "reference": "Where is the nearest coffee shop nearby?",
+    "intent": "SEARCH"
+  }
+]

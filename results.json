@@ -1,0 +1,149 @@
+{
+  "num_samples": 10,
+  "levels": {
+    "raw_asr": {
+      "mean_wer": 0.4503
+    },
+    "flownlp": {
+      "mean_wer": 0.0825
+    }
+  },
+  "per_sample": [
+    {
+      "index": 0,
+      "reference": "Hey can you send the project report to Arun tomorrow morning and mention that the model results are ready.",
+      "raw_asr": "uh hey can you like send the project report to Arun tomorrow morning and uh mention that the model results are ready",
+      "flownlp": "Hey can you send the project report to Arun tomorrow morning and mention that the model results are ready.",
+      "asr_wer": 0.2632,
+      "asr_cer": 0.1226,
+      "nlp_wer": 0.0,
+      "nlp_cer": 0.0,
+      "semantic_preservation": 1.0,
+      "asr_time_s": 0.0,
+      "nlp_time_s": 138.391
+    },
+    {
+      "index": 1,
+      "reference": "Search for python sentence transformers tutorial and example code.",
+      "raw_asr": "um search for python sentence transformers tutorial and example code",
+      "flownlp": "Search for python sentence transformers tutorial and example code.",
+      "asr_wer": 0.3333,
+      "asr_cer": 0.0758,
+      "nlp_wer": 0.0,
+      "nlp_cer": 0.0,
+      "semantic_preservation": 1.0,
+      "asr_time_s": 0.0,
+      "nlp_time_s": 0.232
+    },
+    {
+      "index": 2,
+      "reference": "Function process audio to calculate speech timestamps.",
+      "raw_asr": "function process audio function process audio to calculate speech timestamps",
+      "flownlp": "Function process audio to calculate speech timestamps.",
+      "asr_wer": 0.7143,
+      "asr_cer": 0.463,
+      "nlp_wer": 0.0,
+      "nlp_cer": 0.0,
+      "semantic_preservation": 1.0,
+      "asr_time_s": 0.0,
+      "nlp_time_s": 0.291
+    },
+    {
+      "index": 3,
+      "reference": "First buy milk then call Subhasri finally finish the nlp project presentation.",
+      "raw_asr": "first buy milk then call Subhasri finally finish the nlp project presentation",
+      "flownlp": "First buy milk then call Subhash finally finish the NLP project presentation.",
+      "asr_wer": 0.1667,
+      "asr_cer": 0.0256,
+      "nlp_wer": 0.1667,
+      "nlp_cer": 0.0641,
+      "semantic_preservation": 0.97,
+      "asr_time_s": 0.0,
+      "nlp_time_s": 1.051
+    },
+    {
+      "index": 4,
+      "reference": "What time is the project submission deadline tomorrow?",
+      "raw_asr": "what time is the project submission deadline tomorrow period",
+      "flownlp": "What time is the project submission deadline tomorrow.",
+      "asr_wer": 0.375,
+      "asr_cer": 0.1481,
+      "nlp_wer": 0.125,
+      "nlp_cer": 0.0185,
+      "semantic_preservation": 0.9877,
+      "asr_time_s": 0.0,
+      "nlp_time_s": 0.392
+    },
+    {
+      "index": 5,
+      "reference": "I want to test the pipeline performance on spoken transcripts.",
+      "raw_asr": "um i want to to test the the pipeline performance on spoken transcripts",
+      "flownlp": "I want to test the pipeline performance on spoken transcripts.",
+      "asr_wer": 0.5,
+      "asr_cer": 0.1935,
+      "nlp_wer": 0.0,
+      "nlp_cer": 0.0,
+      "semantic_preservation": 1.0,
+      "asr_time_s": 0.0,
+      "nlp_time_s": 0.232
+    },
+    {
+      "index": 6,
+      "reference": "Variable user name for authentication model.",
+      "raw_asr": "variable user name variable user name for authentication model",
+      "flownlp": "Variable username for authentication model.",
+      "asr_wer": 0.8333,
+      "asr_cer": 0.4773,
+      "nlp_wer": 0.3333,
+      "nlp_cer": 0.0227,
+      "semantic_preservation": 0.979,
+      "asr_time_s": 0.0,
+      "nlp_time_s": 0.305
+    },
+    {
+      "index": 7,
+      "reference": "Please send the email to John with the updated results, thanks.",
+      "raw_asr": "i mean please send the email to John with the updated results comma thanks",
+      "flownlp": "Please send the email to John with the updated results, thanks.",
+      "asr_wer": 0.5455,
+      "asr_cer": 0.2381,
+      "nlp_wer": 0.0,
+      "nlp_cer": 0.0,
+      "semantic_preservation": 1.0,
+      "asr_time_s": 0.0,
+      "nlp_time_s": 0.26
+    },
+    {
+      "index": 8,
+      "reference": "Bullet point check spacy installation bullet point run pytest benchmark.",
+      "raw_asr": "bullet point check spacy installation bullet point run pytest benchmark",
+      "flownlp": "Bullet point check space installation bullet point run test benchmark.",
+      "asr_wer": 0.2,
+      "asr_cer": 0.0278,
+      "nlp_wer": 0.2,
+      "nlp_cer": 0.0417,
+      "semantic_preservation": 0.708,
+      "asr_time_s": 0.0,
+      "nlp_time_s": 0.344
+    },
+    {
+      "index": 9,
+      "reference": "Where is the nearest coffee shop nearby?",
+      "raw_asr": "where is the nearest coffee shop nearby question mark",
+      "flownlp": "Where is the nearest coffee shop nearby?",
+      "asr_wer": 0.5714,
+      "asr_cer": 0.375,
+      "nlp_wer": 0.0,
+      "nlp_cer": 0.0,
+      "semantic_preservation": 1.0,
+      "asr_time_s": 0.0,
+      "nlp_time_s": 0.207
+    }
+  ],
+  "intent_metrics": {
+    "accuracy": 0.5,
+    "precision": 0.6,
+    "recall": 0.5,
+    "f1": 0.5333
+  }
+}
